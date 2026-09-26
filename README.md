@@ -83,6 +83,14 @@ docker compose exec web bash          # or: docker exec -it <container> bash
 
 Lost+Found is an optional phase before the normal Gunky giveaway flow. Upload an item on the lost+found domain and it posts to the lost+found Slack channel with a **This is mine** button. Unclaimed items are promoted to Gunky after the hold period (default 14 days, configurable under **Settings → Lost+Found**). Claimed items must be picked up within the pickup deadline (default 7 days) or they are promoted to Gunky as well. Promoted items enter the normal Gunky poll and are flagged as having been lost+found.
 
+### Duplicate hints
+
+After an item's poll is posted (and its AI description has arrived, when there is a photo), Gunky compares it with items from the same site posted in the previous 60 days. If any look like the same thing, it replies once in the poll's thread linking them and saying how each turned out. It never holds up the post.
+
+- `DUPLICATE_HINTS_ENABLED` — set to `true` to post replies. Unset, the check still runs and logs what it would have posted.
+- `DUPLICATE_HINT_MIN_RANK` — minimum full-text rank from 0 to 1 (default `0.2`). Matches must also share at least two meaningful words.
+- `bin/rails "gunky:duplicate_hints:report[14]"` lists each item from the last 14 days with its closest matches, rank and shared words. Use it to pick the threshold before turning replies on.
+
 ### Running Tests
 
 Uses a separate Compose file (no app image build; source is bind-mounted; Postgres **18** and Redis **7** with `gunky-*` container names):

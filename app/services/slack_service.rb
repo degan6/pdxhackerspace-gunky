@@ -152,7 +152,55 @@ class SlackService
     slack_api(:chat_update, "chat_update_lost_found", payload)
   end
 
+  # Threaded (not broadcast) note on an item's post pointing at earlier items
+  # that look like the same thing, and how each of them turned out.
+  def post_duplicate_hint(item, matches, channel:, thread_ts:)
+    return if matches.empty? || channel.blank? || thread_ts.blank?
+
+    text = duplicate_hint_text(matches)
+    payload = {
+      channel: channel,
+      thread_ts: thread_ts,
+      text: text,
+      blocks: [ { type: "section", text: { type: "mrkdwn", text: text } } ]
+    }
+    log_payload("chat_postMessage_duplicate_hint", payload)
+    @client.chat_postMessage(**payload)
+  end
+
   private
+
+  def duplicate_hint_text(matches)
+    lines = matches.map do |match|
+      label = slack_escape(match.display_description.to_s.truncate(80))
+      url = item_internal_url(match)
+      label = "<#{url}|#{label.tr('|', '/')}>" if url.present?
+      "• #{label} — posted #{match.created_at.strftime('%b %-d')}, #{duplicate_outcome(match)}."
+    end
+
+    ":eyes: This might already be here:\n#{lines.join("\n")}"
+  end
+
+  def duplicate_outcome(item)
+    if item.in_lost_found?
+      return "claimed from lost+found" if item.lost_found_claimed?
+      return "picked up from lost+found" if item.lost_found_picked_up?
+
+      return "unclaimed in lost+found"
+    end
+
+    case item.disposition
+    when "pending" then "still pending"
+    when "mine" then "claimed"
+    when "foster" then "kept for the space"
+    when "kill" then "trashed"
+    else "cancelled"
+    end
+  end
+
+  def slack_escape(text)
+    text.gsub("&", "&amp;").gsub("<", "&lt;").gsub(">", "&gt;")
+  end
 
   def lost_found_channel_id
     channel = ENV["SLACK_LOST_FOUND_CHANNEL_ID"].to_s.strip
