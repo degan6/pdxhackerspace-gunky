@@ -87,7 +87,7 @@ Lost+Found is an optional phase before the normal Gunky giveaway flow. Upload an
 
 After an item's poll is posted (and its AI description has arrived, when there is a photo), Gunky compares it with items from the same site posted in the previous 60 days. If any look like the same thing, it replies once in the poll's thread linking them and saying how each turned out. It never holds up the post.
 
-- `DUPLICATE_HINTS_ENABLED` — set to `true` to post replies. Unset, the check still runs and logs what it would have posted.
+- `DUPLICATE_HINTS_ENABLED` — set to any value to post replies (unset it to turn them off). Unset, the check still runs and logs what it would have posted.
 - `DUPLICATE_HINT_MIN_RANK` — minimum full-text rank from 0 to 1 (default `0.2`). Matches must also share at least two meaningful words.
 - `bin/rails "gunky:duplicate_hints:report[14]"` lists each item from the last 14 days with its closest matches, rank and shared words. Use it to pick the threshold before turning replies on.
 

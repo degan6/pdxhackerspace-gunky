@@ -152,9 +152,7 @@ class SlackService
     slack_api(:chat_update, "chat_update_lost_found", payload)
   end
 
-  # Threaded (not broadcast) note on an item's post pointing at earlier items
-  # that look like the same thing, and how each of them turned out.
-  def post_duplicate_hint(item, matches, channel:, thread_ts:)
+  def post_duplicate_hint(matches, channel:, thread_ts:)
     return if matches.empty? || channel.blank? || thread_ts.blank?
 
     text = duplicate_hint_text(matches)
@@ -182,19 +180,22 @@ class SlackService
   end
 
   def duplicate_outcome(item)
-    if item.in_lost_found?
-      return "claimed from lost+found" if item.lost_found_claimed?
-      return "picked up from lost+found" if item.lost_found_picked_up?
-
-      return "unclaimed in lost+found"
-    end
-
-    case item.disposition
-    when "pending" then "still pending"
-    when "mine" then "claimed"
-    when "foster" then "kept for the space"
-    when "kill" then "trashed"
-    else "cancelled"
+    if item.lost_found_unclaimed?
+      "unclaimed in lost+found"
+    elsif item.lost_found_claimed?
+      "claimed from lost+found"
+    elsif item.lost_found_picked_up?
+      "picked up from lost+found"
+    elsif item.pending?
+      "still pending"
+    elsif item.mine?
+      "claimed"
+    elsif item.foster?
+      "kept for the space"
+    elsif item.kill?
+      "trashed"
+    else
+      "cancelled"
     end
   end
 

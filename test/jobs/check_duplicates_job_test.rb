@@ -86,7 +86,7 @@ class CheckDuplicatesJobTest < ActiveJob::TestCase
     assert_nil @item.reload.duplicate_checked_at
   end
 
-  test "only logs when the flag is off" do
+  test "only logs when the flag is unset" do
     ENV["DUPLICATE_HINTS_ENABLED"] = nil
 
     with_recorded_hints { CheckDuplicatesJob.perform_now(@item.id) }
@@ -131,7 +131,7 @@ class CheckDuplicatesJobTest < ActiveJob::TestCase
 
   def with_recorded_hints(&block)
     calls = @hint_calls
-    recorder = lambda do |_item, matches, channel:, thread_ts:|
+    recorder = lambda do |matches, channel:, thread_ts:|
       calls << { matches: matches, channel: channel, thread_ts: thread_ts }
     end
     with_overridden_instance_method(SlackService, :post_duplicate_hint, recorder, &block)
@@ -143,21 +143,5 @@ class CheckDuplicatesJobTest < ActiveJob::TestCase
       filename: "photo.jpg",
       content_type: "image/jpeg"
     )
-  end
-
-  def with_overridden_class_method(klass, method_name, replacement)
-    original_method = klass.method(method_name)
-    klass.define_singleton_method(method_name, &replacement)
-    yield
-  ensure
-    klass.define_singleton_method(method_name, original_method)
-  end
-
-  def with_overridden_instance_method(klass, method_name, replacement)
-    original_method = klass.instance_method(method_name)
-    klass.define_method(method_name, &replacement)
-    yield
-  ensure
-    klass.define_method(method_name, original_method)
   end
 end

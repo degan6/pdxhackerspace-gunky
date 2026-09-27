@@ -1,6 +1,3 @@
-# Finds earlier items on the same site whose text looks like this item's, so a
-# new Slack poll can point at them. Postgres full-text for now; a photo hash or
-# embeddings can replace #matches later without touching the job or the reply.
 class DuplicateFinder
   Match = Data.define(:item, :rank, :shared_lexemes)
 
@@ -36,7 +33,6 @@ class DuplicateFinder
       .first(limit)
   end
 
-  # The item's own stemmed words, minus the stoplist. What a match must share.
   def lexemes
     @lexemes ||= begin
       text = "#{@item.description} #{@item.ai_description}"
@@ -60,8 +56,7 @@ class DuplicateFinder
       .order(Arel.sql("duplicate_rank DESC"), created_at: :desc)
   end
 
-  # Only items posted before this one, so a report over old items reads the way
-  # the live check would have.
+  # Earlier items only, so the report over past items matches the live check.
   def candidates
     scope = @item.in_lost_found? ? Item.lost_found_visible : Item.gunky_visible
     scope
@@ -69,8 +64,7 @@ class DuplicateFinder
       .where(created_at: (@item.created_at - WINDOW)...@item.created_at)
   end
 
-  # OR the lexemes together. A tsquery cast does no re-stemming, and quoting
-  # each lexeme keeps punctuation in odd tokens from breaking the query.
+  # Cast rather than to_tsquery so the lexemes are not stemmed a second time.
   def tsquery_text
     lexemes.map { |lexeme| "'#{lexeme.gsub('\\', '\\\\\\\\').gsub("'", "''")}'" }.join(" | ")
   end

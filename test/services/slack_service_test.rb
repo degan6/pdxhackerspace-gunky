@@ -601,11 +601,10 @@ class SlackServiceTest < ActiveSupport::TestCase
     client = FakeSlackClient.new
     service.instance_variable_set(:@client, client)
     trashed = items(:killed_item)
-    pending = items(:pending_item)
     original_url = ENV["APP_INTERNAL_URL"]
     ENV["APP_INTERNAL_URL"] = "https://gunky.test/"
 
-    service.post_duplicate_hint(pending, [ trashed ], channel: "C1", thread_ts: "1.2")
+    service.post_duplicate_hint([ trashed ], channel: "C1", thread_ts: "1.2")
 
     call = client.post_calls.first
     assert_equal "C1", call[:channel]
@@ -624,7 +623,7 @@ class SlackServiceTest < ActiveSupport::TestCase
     original_url = ENV.delete("APP_INTERNAL_URL")
     earlier = Item.create!(description: "Cables <HDMI> & DVI")
 
-    service.post_duplicate_hint(items(:pending_item), [ earlier ], channel: "C1", thread_ts: "1.2")
+    service.post_duplicate_hint([ earlier ], channel: "C1", thread_ts: "1.2")
 
     text = client.post_calls.first[:text]
     assert_includes text, "Cables &lt;HDMI&gt; &amp; DVI"

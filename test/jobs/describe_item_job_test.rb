@@ -29,12 +29,8 @@ class DescribeItemJobTest < ActiveJob::TestCase
 
   private
 
-  def with_described_image(text)
+  def with_described_image(text, &block)
     AgentSetting.instance.update!(enabled: true)
-    original = OllamaService.instance_method(:describe_image)
-    OllamaService.define_method(:describe_image) { |_photo| text }
-    yield
-  ensure
-    OllamaService.define_method(:describe_image, original)
+    with_overridden_instance_method(OllamaService, :describe_image, ->(_photo) { text }, &block)
   end
 end

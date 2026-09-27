@@ -1,14 +1,10 @@
-# Replies in an item's Slack thread when earlier items look like the same thing.
-# Enqueued by both PostToSlackJob and DescribeItemJob, which finish in either
-# order; it exits until the item is posted and any AI description has arrived,
-# and replies at most once per item.
 class CheckDuplicatesJob < ApplicationJob
   queue_as :default
 
   AI_DESCRIPTION_FALLBACK_WAIT = 10.minutes
 
   def self.enabled?
-    ActiveModel::Type::Boolean.new.cast(ENV["DUPLICATE_HINTS_ENABLED"]) == true
+    ENV["DUPLICATE_HINTS_ENABLED"].present?
   end
 
   def perform(item_id, ignore_ai_wait: false)
@@ -42,8 +38,7 @@ class CheckDuplicatesJob < ApplicationJob
     item.photo.attached? && item.ai_description.blank? && AgentSetting.enabled?
   end
 
-  # Conditional UPDATE so two concurrent runs cannot both reply. "Checked" means
-  # checked, so the stamp stays even when nothing matches.
+  # Conditional UPDATE so two concurrent runs cannot both reply.
   def claim(item)
     Item.where(id: item.id, duplicate_checked_at: nil).update_all(duplicate_checked_at: Time.current).positive?
   end
@@ -62,7 +57,7 @@ class CheckDuplicatesJob < ApplicationJob
     end
 
     Rails.logger.info("CheckDuplicatesJob: replying to item #{item.id} with #{describe(matches)}")
-    SlackService.new.post_duplicate_hint(item, matches.map(&:item), channel: channel, thread_ts: thread_ts)
+    SlackService.new.post_duplicate_hint(matches.map(&:item), channel: channel, thread_ts: thread_ts)
   end
 
   def describe(matches)

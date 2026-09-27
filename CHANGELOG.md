@@ -8,8 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
-- Duplicate hints: after an item is posted, Gunky replies in its Slack thread when earlier items from the last 60 days look like the same thing, with how each one turned out. Off by default (`DUPLICATE_HINTS_ENABLED`); while off, it only logs what it would have posted
-- `bin/rails "gunky:duplicate_hints:report[14]"` prints each recent item's closest matches, for tuning `DUPLICATE_HINT_MIN_RANK`
+- Slack thread reply pointing at similar items posted in the last 60 days, enabled with `DUPLICATE_HINTS_ENABLED`
+- `gunky:duplicate_hints:report` rake task for tuning `DUPLICATE_HINT_MIN_RANK`
 
 ## [0.19.0] - 2026-09-27
 

@@ -27,8 +27,7 @@ class PostToSlackJob < ApplicationJob
 
   private
 
-  # Runs now if nothing else is pending, and again later without waiting for an
-  # AI description that may never arrive. The check replies at most once.
+  # The delayed run covers an AI description that never arrives.
   def enqueue_duplicate_check(item)
     CheckDuplicatesJob.perform_later(item.id)
     CheckDuplicatesJob.set(wait: CheckDuplicatesJob::AI_DESCRIPTION_FALLBACK_WAIT)
