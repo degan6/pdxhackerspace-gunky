@@ -1,0 +1,57 @@
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <h1 class="mb-0">Log</h1>
+  <%= button_to "Sign out", admin_session_path, method: :delete, class: "btn btn-outline-secondary btn-sm" %>
+</div>
+
+<ul class="nav nav-pills mb-4 flex-wrap">
+  <% LogsController::FILTER_CATEGORIES.each do |label, category| %>
+    <li class="nav-item">
+      <%= link_to label,
+            logs_path(category: category),
+            class: "nav-link #{@category == category ? 'active' : ''}" %>
+    </li>
+  <% end %>
+</ul>
+
+<% if @log_entries.any? %>
+  <div class="list-group mb-4">
+    <% @log_entries.each do |entry| %>
+      <article class="list-group-item">
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-1">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="badge <%= log_entry_category_badge_class(entry.category) %> text-uppercase"><%= entry.category %></span>
+            <% unless entry.succeeded? %>
+              <span class="badge bg-danger">Failed</span>
+            <% end %>
+            <code class="small text-body-secondary"><%= entry.action %></code>
+          </div>
+          <time class="small text-body-secondary text-nowrap" datetime="<%= entry.created_at.iso8601 %>">
+            <%= l(entry.created_at, format: :long) %>
+          </time>
+        </div>
+        <p class="mb-2"><%= entry.message %></p>
+        <% if entry.ip_address.present? || entry.user_agent.present? %>
+          <dl class="small mb-2">
+            <% if entry.ip_address.present? %>
+              <dt class="d-inline text-body-secondary">IP:</dt>
+              <dd class="d-inline me-3"><%= entry.ip_address %></dd>
+            <% end %>
+            <% if entry.user_agent.present? %>
+              <dt class="d-inline text-body-secondary">User agent:</dt>
+              <dd class="d-inline"><%= entry.user_agent %></dd>
+            <% end %>
+          </dl>
+        <% end %>
+        <% if entry.metadata.present? %>
+          <pre class="small bg-body-secondary bg-opacity-25 rounded p-2 mb-0 overflow-auto"><%= JSON.pretty_generate(entry.metadata) %></pre>
+        <% end %>
+      </article>
+    <% end %>
+  </div>
+
+  <div class="d-flex justify-content-center">
+    <%== @pagy.series_nav(:bootstrap) if @pagy.pages > 1 %>
+  </div>
+<% else %>
+  <p class="text-body-secondary">No log entries yet.</p>
+<% end %>

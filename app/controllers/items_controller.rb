@@ -462,9 +462,27 @@ class ItemsController < ApplicationController
       "preview_photo: uploaded blob #{blob.key} " \
       "(#{blob.byte_size} bytes, #{blob.content_type}#{normalized.converted ? ", converted from HEIC" : ""})"
     )
+    ActivityLog.record_upload(
+      action: "preview_photo",
+      message: "Uploaded preview photo #{normalized.filename}",
+      request: request,
+      metadata: {
+        blob_key: blob.key,
+        byte_size: blob.byte_size,
+        content_type: blob.content_type,
+        converted_from_heic: normalized.converted
+      }
+    )
     blob
   rescue Vips::Error => e
     Rails.logger.error("preview_photo: image conversion failed: #{e.message}")
+    ActivityLog.record_upload(
+      action: "preview_photo",
+      message: "Preview photo upload failed: #{e.message}",
+      request: request,
+      metadata: { error: e.message },
+      succeeded: false
+    )
     render json: { error: "Unable to process this photo. Try JPG or PNG." }, status: :unprocessable_entity
     nil
   end
@@ -484,8 +502,25 @@ class ItemsController < ApplicationController
       filename: normalized.filename,
       content_type: normalized.content_type
     )
+    ActivityLog.record_upload(
+      action: "item_photo",
+      message: "Uploaded item photo #{normalized.filename}",
+      request: request,
+      metadata: {
+        filename: normalized.filename,
+        content_type: normalized.content_type,
+        converted_from_heic: normalized.converted
+      }
+    )
   rescue Vips::Error => e
     Rails.logger.error("attach_item_photo!: image conversion failed: #{e.message}")
+    ActivityLog.record_upload(
+      action: "item_photo",
+      message: "Item photo upload failed: #{e.message}",
+      request: request,
+      metadata: { error: e.message },
+      succeeded: false
+    )
     item.errors.add(:photo, "could not be processed")
   end
 

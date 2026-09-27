@@ -20,8 +20,7 @@ class SlackService
       text: "New item: #{summary_text.truncate(100)}",
       blocks: blocks
     }
-    log_payload("chat_postMessage", payload)
-    @client.chat_postMessage(**payload)
+    slack_api(:chat_postMessage, "chat_postMessage", payload)
   end
 
   def update_item_message(item)
@@ -36,8 +35,7 @@ class SlackService
       text: "Item: #{summary_text.truncate(100)}",
       blocks: blocks
     }
-    log_payload("chat_update", payload)
-    @client.chat_update(**payload)
+    slack_api(:chat_update, "chat_update", payload)
   end
 
   def cancel_item_message(item)
@@ -52,8 +50,7 @@ class SlackService
       text: "Item unavailable: #{summary_text.truncate(100)}",
       blocks: blocks
     }
-    log_payload("chat_update_cancelled", payload)
-    @client.chat_update(**payload)
+    slack_api(:chat_update, "chat_update_cancelled", payload)
   end
 
   # Refreshes the already-posted "has completed" message in place so the
@@ -83,8 +80,7 @@ class SlackService
     return if channel.blank? || user.blank?
 
     payload = { channel: channel, user: user, text: text }
-    log_payload("chat_postEphemeral", payload)
-    @client.chat_postEphemeral(**payload)
+    slack_api(:chat_postEphemeral, "chat_postEphemeral", payload)
   end
 
   def replace_expired_item_message(item)
@@ -111,8 +107,7 @@ class SlackService
     return if channel.blank? || ts.blank?
 
     payload = { channel: channel, ts: ts }
-    log_payload("chat_delete", payload)
-    @client.chat_delete(**payload)
+    slack_api(:chat_delete, "chat_delete", payload)
   end
 
   def post_lost_found_item(item)
@@ -154,8 +149,7 @@ class SlackService
       text: "Lost+Found: #{summary_text.truncate(100)}",
       blocks: blocks
     }
-    log_payload("chat_update_lost_found", payload)
-    @client.chat_update(**payload)
+    slack_api(:chat_update, "chat_update_lost_found", payload)
   end
 
   private
@@ -210,20 +204,17 @@ class SlackService
 
   def chat_update_expired(item, text, blocks)
     payload = { channel: item.slack_channel_id, ts: item.slack_message_ts, text: text, blocks: blocks }
-    log_payload("chat_update_expired", payload)
-    @client.chat_update(**payload)
+    slack_api(:chat_update, "chat_update_expired", payload)
   end
 
   def chat_post_expired(channel, text, blocks)
     payload = { channel: channel, text: text, blocks: blocks }
-    log_payload("chat_postMessage_expired", payload)
-    @client.chat_postMessage(**payload)
+    slack_api(:chat_postMessage, "chat_postMessage_expired", payload)
   end
 
   def chat_post_lost_found(channel, text, blocks)
     payload = { channel: channel, text: text, blocks: blocks }
-    log_payload("chat_postMessage_lost_found", payload)
-    @client.chat_postMessage(**payload)
+    slack_api(:chat_postMessage, "chat_postMessage_lost_found", payload)
   end
 
   def slack_error_may_be_image_block?(error)
@@ -339,9 +330,32 @@ class SlackService
     " View item: #{internal_url}"
   end
 
+  def slack_api(api_method, action, payload)
+    sanitized = sanitized_payload_for_log(payload)
+    log_payload(action, sanitized)
+    ActivityLog.record_slack(
+      action: action,
+      message: "Slack #{action}",
+      metadata: { api_method: api_method.to_s, payload: sanitized }
+    )
+    @client.public_send(api_method, **payload.symbolize_keys)
+  rescue Slack::Web::Api::Errors::SlackError => e
+    ActivityLog.record_slack(
+      action: "#{action}_failed",
+      message: "Slack #{action} failed: #{e.message}",
+      metadata: {
+        api_method: api_method.to_s,
+        error: e.message,
+        payload: sanitized
+      },
+      succeeded: false
+    )
+    raise
+  end
+
   def log_payload(action, payload)
     Rails.logger.info(
-      "SlackService #{action} payload: #{sanitized_payload_for_log(payload).to_json}"
+      "SlackService #{action} payload: #{payload.to_json}"
     )
   end
 

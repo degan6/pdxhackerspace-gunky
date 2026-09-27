@@ -1,0 +1,28 @@
+upload_entry:
+  category: upload
+  action: preview_photo
+  message: Uploaded preview photo item.jpg
+  metadata: { "blob_key": "abc123" }
+  ip_address: 127.0.0.1
+  user_agent: TestAgent/1.0
+  succeeded: true
+  created_at: <%= 1.hour.ago.to_fs(:db) %>
+  updated_at: <%= 1.hour.ago.to_fs(:db) %>
+
+slack_entry:
+  category: slack
+  action: chat_postMessage
+  message: Slack chat_postMessage
+  metadata: { "api_method": "chat_postMessage" }
+  succeeded: true
+  created_at: <%= 30.minutes.ago.to_fs(:db) %>
+  updated_at: <%= 30.minutes.ago.to_fs(:db) %>
+
+ai_entry:
+  category: ai
+  action: describe_image
+  message: AI describe_image succeeded
+  metadata: { "description": "A red toolbox" }
+  succeeded: true
+  created_at: <%= 10.minutes.ago.to_fs(:db) %>
+  updated_at: <%= 10.minutes.ago.to_fs(:db) %>

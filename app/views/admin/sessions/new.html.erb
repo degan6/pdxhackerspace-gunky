@@ -1,0 +1,15 @@
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <h1 class="h3 mb-4">Admin sign in</h1>
+
+    <%= form_with url: admin_session_path, method: :post, class: "card border-0 shadow-sm" do %>
+      <div class="card-body">
+        <div class="mb-3">
+          <%= label_tag :password, "Password", class: "form-label" %>
+          <%= password_field_tag :password, nil, class: "form-control", autocomplete: "current-password", required: true %>
+        </div>
+        <%= submit_tag "Sign in", class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  </div>
+</div>

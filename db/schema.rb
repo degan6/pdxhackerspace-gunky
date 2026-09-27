@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_24_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_27_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -91,6 +91,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_160000) do
     t.datetime "updated_at", null: false
     t.index ["default_lost_found"], name: "index_locations_on_default_lost_found_unique", unique: true, where: "(default_lost_found = true)"
     t.index ["name"], name: "index_locations_on_name", unique: true
+  end
+
+  create_table "log_entries", force: :cascade do |t|
+    t.string "action", null: false
+    t.string "category", null: false
+    t.datetime "created_at", null: false
+    t.string "ip_address"
+    t.text "message", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.boolean "succeeded", default: true, null: false
+    t.datetime "updated_at", null: false
+    t.text "user_agent"
+    t.index ["category", "created_at"], name: "index_log_entries_on_category_and_created_at"
+    t.index ["created_at"], name: "index_log_entries_on_created_at"
   end
 
   create_table "lost_found_settings", force: :cascade do |t|

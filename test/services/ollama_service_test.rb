@@ -127,7 +127,11 @@ class OllamaServiceTest < ActiveSupport::TestCase
 
   private
 
-  FakeBlob = Data.define(:download)
+  FakeBlob = Data.define(:download) do
+    def byte_size
+      download.bytesize
+    end
+  end
 
   class FakeHttp
     attr_reader :last_request

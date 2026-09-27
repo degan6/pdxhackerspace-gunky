@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-09-27
+
+### Added
+
+- Admin activity log for uploads (IP and user agent), Slack traffic, and local AI attempts, with category filters and pagination (`GUNKY_ADMIN_PASSWORD`, `/admin/sign_in`)
+
 ## [0.18.3] - 2026-09-24
 
 ### Added

@@ -17,9 +17,11 @@ class SlackInteractionsController < ApplicationController
 
     case payload["type"]
     when "block_actions"
+      log_inbound_slack(payload)
       handle_block_actions(payload)
     else
       Rails.logger.info("Slack callback ignored unsupported payload type: #{payload['type'].inspect}")
+      log_inbound_slack(payload, ignored: true)
     end
 
     head :ok
@@ -311,5 +313,38 @@ class SlackInteractionsController < ApplicationController
       request_id: request.request_id
     )
     Rails.logger.error("Slack signature verification failed: #{context.to_json}")
+    ActivityLog.record_slack(
+      action: "inbound_signature_failed",
+      message: "Slack inbound request rejected (#{details[:reason]})",
+      metadata: context,
+      succeeded: false
+    )
+  end
+
+  def log_inbound_slack(payload, ignored: false)
+    user = payload["user"] || {}
+    actions = Array(payload["actions"]).map { |action| action["action_id"] }.compact
+    ActivityLog.record_slack(
+      action: ignored ? "inbound_ignored" : "inbound_block_actions",
+      message: inbound_slack_message(payload, user, actions, ignored: ignored),
+      metadata: {
+        payload_type: payload["type"],
+        slack_user_id: user["id"],
+        slack_username: user["username"],
+        action_ids: actions,
+        channel_id: payload.dig("channel", "id"),
+        message_ts: payload.dig("message", "ts")
+      }
+    )
+  end
+
+  def inbound_slack_message(payload, user, actions, ignored:)
+    username = user["username"].presence || user["id"].presence || "unknown user"
+    if ignored
+      return "Ignored Slack #{payload['type']} from #{username}"
+    end
+
+    action_summary = actions.presence&.join(", ") || "no actions"
+    "Slack inbound from #{username}: #{action_summary}"
   end
 end

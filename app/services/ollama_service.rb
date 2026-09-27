@@ -18,6 +18,15 @@ class OllamaService
       "OllamaService: describing image via #{uri} model=#{@settings.ollama_model} " \
       "(timeouts: open=#{OPEN_TIMEOUT_SECONDS}s read=#{READ_TIMEOUT_SECONDS}s)"
     )
+    ActivityLog.record_ai(
+      action: "describe_image",
+      message: "AI describe_image started (#{@settings.ollama_model})",
+      metadata: {
+        endpoint: uri.to_s,
+        model: @settings.ollama_model,
+        byte_size: image_blob.byte_size
+      }
+    )
 
     image_data = Base64.strict_encode64(image_blob.download)
 
@@ -47,15 +56,37 @@ class OllamaService
     response = request_with_diagnostics(http, request, uri)
 
     unless response.is_a?(Net::HTTPSuccess)
+      body_preview = response.body.to_s.truncate(500)
       Rails.logger.error(
-        "OllamaService: HTTP #{response.code} from #{uri}: #{response.body.to_s.truncate(500)}"
+        "OllamaService: HTTP #{response.code} from #{uri}: #{body_preview}"
+      )
+      log_ai_failure(
+        "describe_image",
+        "AI HTTP #{response.code}: #{response.body.to_s.truncate(200)}",
+        uri,
+        response_code: response.code,
+        body: body_preview
       )
       raise Error, "AI endpoint returned HTTP #{response.code}: #{response.body.to_s.truncate(200)}"
     end
 
     parsed = parse_response_json(response.body, uri)
-    response_text(parsed)&.strip.presence ||
-      raise(Error, "AI endpoint returned empty description text")
+    description = response_text(parsed)&.strip.presence
+    unless description
+      log_ai_failure("describe_image", "AI returned empty description text", uri)
+      raise Error, "AI endpoint returned empty description text"
+    end
+
+    ActivityLog.record_ai(
+      action: "describe_image",
+      message: "AI describe_image succeeded",
+      metadata: {
+        endpoint: uri.to_s,
+        model: @settings.ollama_model,
+        description: description.truncate(500)
+      }
+    )
+    description
   end
 
   private
@@ -63,16 +94,20 @@ class OllamaService
   def request_with_diagnostics(http, request, uri)
     http.request(request)
   rescue Net::OpenTimeout => e
+    log_ai_failure("describe_image", "AI connection timed out: #{e.message}", uri)
     raise Error,
           "AI endpoint connection timed out after #{OPEN_TIMEOUT_SECONDS}s " \
           "(#{uri.host}:#{uri.port}): #{e.message}"
   rescue Net::ReadTimeout => e
+    log_ai_failure("describe_image", "AI read timed out: #{e.message}", uri)
     raise Error,
           "AI endpoint read timed out after #{READ_TIMEOUT_SECONDS}s waiting for " \
           "#{@settings.ollama_model} at #{uri}: #{e.message}"
   rescue Errno::ECONNREFUSED => e
+    log_ai_failure("describe_image", "AI connection refused: #{e.message}", uri)
     raise Error, "AI endpoint refused connection at #{uri.host}:#{uri.port}: #{e.message}"
   rescue SocketError, Errno::EHOSTUNREACH, Errno::ENETUNREACH => e
+    log_ai_failure("describe_image", "AI network error: #{e.message}", uri)
     raise Error, "AI endpoint network error for #{uri}: #{e.message}"
   end
 
@@ -80,7 +115,20 @@ class OllamaService
     JSON.parse(body)
   rescue JSON::ParserError => e
     Rails.logger.error("OllamaService: invalid JSON from #{uri}: #{body.to_s.truncate(500)}")
+    log_ai_failure("describe_image", "AI invalid JSON: #{e.message}", uri)
     raise Error, "AI endpoint returned invalid JSON: #{e.message}"
+  end
+
+  def log_ai_failure(action, message, uri, extra_metadata = {})
+    ActivityLog.record_ai(
+      action: action,
+      message: message,
+      metadata: {
+        endpoint: uri.to_s,
+        model: @settings.ollama_model
+      }.merge(extra_metadata),
+      succeeded: false
+    )
   end
 
   def response_text(parsed)

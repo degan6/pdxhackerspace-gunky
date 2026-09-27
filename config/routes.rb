@@ -48,6 +48,10 @@ Rails.application.routes.draw do
 
   post "slack/interactions", to: "slack_interactions#create"
 
+  get "admin/sign_in", to: "admin/sessions#new", as: :admin_sign_in
+  resource :admin_session, only: [ :create, :destroy ], controller: "admin/sessions"
+  resources :logs, only: [ :index ]
+
   get "up" => "rails/health#show", as: :rails_health_check
 
   root "items#index"

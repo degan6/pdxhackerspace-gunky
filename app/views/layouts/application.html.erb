@@ -76,15 +76,20 @@
               <%= link_to lost_found_site? ? "Gunky site" : "Lost+Found site", other_site_url, class: "nav-link" %>
             </li>
           </ul>
-          <%= form_with url: items_path, method: :get, class: "d-flex my-2 my-lg-0", html: { role: "search" } do %>
-            <div class="input-group">
-              <%= search_field_tag :q, params[:q],
-                    class: "form-control",
-                    placeholder: "Search items",
-                    "aria-label": "Search items" %>
-              <button class="btn btn-outline-secondary" type="submit">Search</button>
-            </div>
-          <% end %>
+          <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2 ms-lg-auto my-2 my-lg-0">
+            <% if admin_signed_in? %>
+              <%= link_to "Log", logs_path, class: "nav-link py-lg-2 px-lg-2 text-lg-end" %>
+            <% end %>
+            <%= form_with url: items_path, method: :get, class: "d-flex", html: { role: "search" } do %>
+              <div class="input-group">
+                <%= search_field_tag :q, params[:q],
+                      class: "form-control",
+                      placeholder: "Search items",
+                      "aria-label": "Search items" %>
+                <button class="btn btn-outline-secondary" type="submit">Search</button>
+              </div>
+            <% end %>
+          </div>
         </div>
       </div>
     </nav>
