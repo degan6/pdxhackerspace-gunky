@@ -1,5 +1,5 @@
 class DuplicateFinder
-  Match = Data.define(:item, :rank, :shared_lexemes)
+  Match = Struct.new(:item, :rank, :shared_lexemes, keyword_init: true)
 
   # Stemmed words that vision-model descriptions share regardless of the object.
   STOPLIST = %w[
